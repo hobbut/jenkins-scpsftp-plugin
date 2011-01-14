@@ -29,4 +29,5 @@
       <f:checkbox name="hello_world.useFrench" checked="${descriptor.useFrench()}" />
     </f:entry>
   </f:section>
+
 </j:jelly>
