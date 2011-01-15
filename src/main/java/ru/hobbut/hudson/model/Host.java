@@ -44,4 +44,8 @@ public class Host {
         this.username = username;
         this.password = password;
     }
+
+    public String getName() {
+        return connectUrl;
+    }
 }

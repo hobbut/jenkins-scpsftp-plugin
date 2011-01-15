@@ -1,15 +1,41 @@
-<j:jelly xmlns:j="jelly:core" xmlns:st="jelly:stapler" xmlns:d="jelly:define" xmlns:l="/lib/layout" xmlns:t="/lib/hudson" xmlns:f="/lib/form">
-  <!--
-    This jelly script is used for per-project configuration.
+<j:jelly xmlns:j="jelly:core" xmlns:st="jelly:stapler" xmlns:d="jelly:define" xmlns:l="/lib/layout"
+         xmlns:t="/lib/hudson" xmlns:f="/lib/form">
+    <!--
+      This jelly script is used for per-project configuration.
 
-    See global.jelly for a general discussion about jelly script.
-  -->
+      See global.jelly for a general discussion about jelly script.
+    -->
 
-  <!--
-    Creates a text field that shows the value of the "name" property.
-    When submitted, it will be passed to the corresponding constructor parameter.
-  -->
-  <f:entry title="Name" field="name">
-    <f:textbox />
-  </f:entry>
+    <!--
+      Creates a text field that shows the value of the "name" property.
+      When submitted, it will be passed to the corresponding constructor parameter.
+    -->
+    <f:entry title="${%SCP Sites}" name="o">
+        <f:repeatable name="hostsWithEntries" var="host" items="${instance.hostsWithEntries}">
+            <table width="100%">
+                <f:entry title="Host">
+                    <select class="setting-input" name="connectUrl">
+                        <j:forEach var="h" items="${descriptor.hosts}">
+                            <f:option selected="${host.connectUrl==h.connectUrl}">${h.connectUrl}</f:option>
+                        </j:forEach>
+                    </select>
+                </f:entry>
+                <f:nested>
+                    <f:entry name="entry">
+                        <f:entry title="${%Source}">
+                            <f:textbox name="entry.srcPath" value="${host.srcPath}"/>
+                        </f:entry>
+                        <f:entry title="${%Destination}">
+                            <f:textbox name="entry.dstPath" value="${host.dstPath}"/>
+                        </f:entry>
+                        <f:entry title="">
+                            <div align="right">
+                                <f:repeatableDeleteButton/>
+                            </div>
+                        </f:entry>
+                    </f:entry>
+                </f:nested>
+            </table>
+        </f:repeatable>
+    </f:entry>
 </j:jelly>

@@ -8,20 +8,28 @@ import hudson.tasks.BuildStepMonitor;
 import hudson.tasks.Publisher;
 import hudson.util.CopyOnWriteList;
 import hudson.util.FormValidation;
+import net.sf.json.JSON;
+import net.sf.json.JSONArray;
 import net.sf.json.JSONObject;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
+import org.kohsuke.stapler.DataBoundConstructor;
 import org.kohsuke.stapler.QueryParameter;
 import org.kohsuke.stapler.StaplerRequest;
 import org.kohsuke.stapler.StaplerResponse;
+import org.springframework.util.StringUtils;
+import ru.hobbut.hudson.model.Entry;
 import ru.hobbut.hudson.model.Host;
+import ru.hobbut.hudson.model.HostWithEntries;
 import ru.hobbut.hudson.utils.ConnectInfo;
 import ru.hobbut.hudson.utils.PluginException;
 import ru.hobbut.hudson.utils.Utils;
 
 import javax.servlet.ServletException;
 import java.io.IOException;
+import java.util.ArrayList;
 import java.util.Iterator;
+import java.util.List;
 
 /**
  * Created by IntelliJ IDEA.
@@ -32,6 +40,20 @@ import java.util.Iterator;
 public class ScpSftpPublisher extends Publisher {
 
     private static final Log log = LogFactory.getLog(ScpSftpPublisher.class);
+
+    private List<HostWithEntries> hostsWithEntries;
+
+    @DataBoundConstructor
+    public ScpSftpPublisher(List<HostWithEntries> hostsWithEntries) {
+        if (hostsWithEntries == null) {
+            hostsWithEntries = new ArrayList<HostWithEntries>();
+        }
+        this.hostsWithEntries = hostsWithEntries;
+    }
+
+    public List<HostWithEntries> getHostsWithEntries() {
+        return hostsWithEntries;
+    }
 
     public BuildStepMonitor getRequiredMonitorService() {
         return BuildStepMonitor.BUILD;
@@ -52,8 +74,43 @@ public class ScpSftpPublisher extends Publisher {
             return "SCP SFTP OLOLO";
         }
 
+        private Host findHost(String connectUrl) {
+            if (StringUtils.hasText(connectUrl)) {
+                return null;
+            }
+            log.error("finding host:" + connectUrl);
+            for (Host host : hosts) {
+                log.error("h>>" + host);
+                if (connectUrl.equals(host.getConnectUrl())) {
+                    return host;
+                }
+            }
+            return null;
+        }
+
         @Override
         public Publisher newInstance(StaplerRequest req, JSONObject formData) throws FormException {
+            /*JSONArray hosts = formData.getJSONArray("hostsWithEntries");
+            log.error("" + formData);
+            log.error("" + hosts);
+            List<HostWithEntries> hostWithEntriesList = new ArrayList<HostWithEntries>();
+            for (Object o : hosts) {
+                log.error("" + o);
+                String connectUrl = ((JSONObject) o).getString("connectUrl");
+                log.error("connUrl>>" + connectUrl);
+                JSONObject entriesJson = ((JSONObject) o).getJSONObject("entries");
+                List<Entry> entries;
+                if (entriesJson != null && !entriesJson.isNullObject()) {
+                    entries = req.bindJSON(List.class, entriesJson);
+                    log.error("entries>>" + entries);
+                } else {
+                    entries = new ArrayList<Entry>();
+                }
+                hostWithEntriesList.add(new HostWithEntries(connectUrl, entries));
+            }
+            log.error("" + hostWithEntriesList);
+            return new ScpSftpPublisher(hostWithEntriesList);*/
+            log.error("" + formData);
             return req.bindJSON(ScpSftpPublisher.class, formData);
         }
 
