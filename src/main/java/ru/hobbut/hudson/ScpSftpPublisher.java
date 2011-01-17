@@ -1,12 +1,15 @@
 package ru.hobbut.hudson;
 
-import hudson.Extension;
-import hudson.model.AbstractProject;
-import hudson.model.Descriptor;
+import hudson.*;
+import hudson.model.*;
+import hudson.slaves.EnvironmentVariablesNodeProperty;
+import hudson.slaves.NodeProperty;
+import hudson.slaves.NodePropertyDescriptor;
 import hudson.tasks.BuildStepDescriptor;
 import hudson.tasks.BuildStepMonitor;
 import hudson.tasks.Publisher;
 import hudson.util.CopyOnWriteList;
+import hudson.util.DescribableList;
 import hudson.util.FormValidation;
 import net.sf.json.JSON;
 import net.sf.json.JSONArray;
@@ -18,7 +21,6 @@ import org.kohsuke.stapler.QueryParameter;
 import org.kohsuke.stapler.StaplerRequest;
 import org.kohsuke.stapler.StaplerResponse;
 import org.springframework.util.StringUtils;
-import ru.hobbut.hudson.model.Entry;
 import ru.hobbut.hudson.model.Host;
 import ru.hobbut.hudson.model.HostWithEntries;
 import ru.hobbut.hudson.utils.ConnectInfo;
@@ -59,7 +61,60 @@ public class ScpSftpPublisher extends Publisher {
         return BuildStepMonitor.BUILD;
     }
 
+    private Host getHost(String connectUrl) {
+        return DESCRIPTOR.getHost(connectUrl);
+    }
+
+    @Override
+    public boolean perform(AbstractBuild build, Launcher launcher, BuildListener listener) {
+        if (build.getResult() == Result.FAILURE) {
+            // build failed. don't post
+            return true;
+        }
+
+        Result result = Result.SUCCESS;
+
+        for (HostWithEntries hostWithEntries : hostsWithEntries) {
+            log.error("proceed:"+hostWithEntries.getConnectUrl());
+            try {
+                Host host = getHost(hostWithEntries.getConnectUrl());
+                if (host == null) {
+                    build.setResult(Result.UNSTABLE);
+                    log.error("Cannot find host:" + hostWithEntries.getConnectUrl());
+                    continue;
+                }
+                String expandedSrcPath = Util.replaceMacro(hostWithEntries.getSrcPath(), build.getEnvironment(listener));
+                String expandedDstPath = Util.replaceMacro(hostWithEntries.getDstPath(), build.getEnvironment(listener)).trim();
+                FilePath ws = build.getWorkspace();
+                FilePath[] src = ws.list(expandedSrcPath);
+
+                log.error("src:" + expandedSrcPath);
+                log.error("dst:" + expandedDstPath);
+                if (src.length == 0) {
+                    log.error("no files found at:" + hostWithEntries.getSrcPath());
+                    continue;
+                }
+
+                for (FilePath filePath : src) {
+                    log.error("move file from:" + filePath.getRemote() + " to:" + expandedDstPath);
+                }
+
+
+            } catch (InterruptedException e) {
+                e.printStackTrace(listener.error("error"));  //To change body of catch statement use File | Settings | File Templates.
+                result = Result.UNSTABLE;
+            } catch (IOException e) {
+                e.printStackTrace(listener.error("error"));  //To change body of catch statement use File | Settings | File Templates.
+                result = Result.UNSTABLE;
+            }
+        }
+        build.setResult(result);
+        return true;
+    }
+
     @Extension // this marker indicates Hudson that this is an implementation of an extension point.
+    public static final DescriptorImpl DESCRIPTOR = new DescriptorImpl();
+
     public static final class DescriptorImpl extends BuildStepDescriptor<Publisher> {
 
         private final CopyOnWriteList<Host> hosts = new CopyOnWriteList<Host>();
@@ -71,7 +126,7 @@ public class ScpSftpPublisher extends Publisher {
 
         @Override
         public String getDisplayName() {
-            return "SCP SFTP OLOLO";
+            return "SCP SFTP Publisher";
         }
 
         private Host findHost(String connectUrl) {
@@ -123,7 +178,6 @@ public class ScpSftpPublisher extends Publisher {
 
         public DescriptorImpl(Class<? extends Publisher> clazz) {
             super(clazz);
-            load();
             log.debug(hosts);
         }
 
@@ -132,22 +186,27 @@ public class ScpSftpPublisher extends Publisher {
             log.debug(hosts);
         }
 
-        public Host[] getHosts() {
-            Iterator<Host> it = hosts.iterator();
-            int size = 0;
-            while (it.hasNext()) {
-                it.next();
-                size++;
+        public Host getHost(String connectionUrl) {
+            if (!StringUtils.hasText(connectionUrl)) {
+                return null;
             }
-            return hosts.toArray(new Host[size]);
+            for (Host host : hosts) {
+                if (connectionUrl.equals(host.getConnectUrl())) {
+                    return host;
+                }
+            }
+            return null;
+        }
+
+        public Host[] getHosts() {
+            return hosts.toArray(new Host[hosts.size()]);
         }
 
         public FormValidation doTestConnection(StaplerRequest req, StaplerResponse rsp,
                                                @QueryParameter("scp.connectUrl") String connectUrl,
-                                               @QueryParameter("scp.username") final String username,
-                                               @QueryParameter("scp.password") final String password) {
+                                               @QueryParameter("scp.password") String password) {
             log.error("" + req.getParameterMap());
-            Host host = new Host(connectUrl, username, password);
+            Host host = new Host(connectUrl, password);
             log.error("" + connectUrl);
             try {
                 ConnectInfo connectInfo = Utils.getConnectInfo(host);

@@ -9,7 +9,6 @@ package ru.hobbut.hudson.model;
 public class Host {
 
     private String connectUrl;
-    private String username;
     private String password;
 
     public String getConnectUrl() {
@@ -23,14 +22,6 @@ public class Host {
     public Host() {
     }
 
-    public String getUsername() {
-        return username;
-    }
-
-    public void setUsername(String username) {
-        this.username = username;
-    }
-
     public String getPassword() {
         return password;
     }
@@ -39,9 +30,8 @@ public class Host {
         this.password = password;
     }
 
-    public Host(String connectUrl, String username, String password) {
+    public Host(String connectUrl, String password) {
         this.connectUrl = connectUrl;
-        this.username = username;
         this.password = password;
     }
 

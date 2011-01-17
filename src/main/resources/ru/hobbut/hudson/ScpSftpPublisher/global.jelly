@@ -21,9 +21,6 @@
                     <f:entry title="${%Connect url}">
                         <f:textbox name="scp.connectUrl" value="${host.connectUrl}"/>
                     </f:entry>
-                    <f:entry title="${%User Name}">
-                        <f:textbox name="scp.username" value="${host.username}"/>
-                    </f:entry>
                     <f:entry title="${%Password}">
                         <f:password name="scp.password"
                                     type="password" value="${host.password}"/>
@@ -32,7 +29,7 @@
                         <div align="left">
                             <f:validateButton
                                     title="${%Test Connection}" progress="${%Testing...}"
-                                    method="testConnection" with="scp.connectUrl,scp.username,scp.password"/>
+                                    method="testConnection" with="scp.connectUrl,scp.password"/>
                         </div>
                     </f:entry>
                     <f:entry title="">

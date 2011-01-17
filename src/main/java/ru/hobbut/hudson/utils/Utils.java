@@ -11,10 +11,8 @@ import org.springframework.util.StringUtils;
 import ru.hobbut.hudson.model.Host;
 
 import java.io.IOException;
-import java.net.MalformedURLException;
 import java.net.URI;
 import java.net.URISyntaxException;
-import java.net.URL;
 
 import static ru.hobbut.hudson.utils.ConnectInfo.ProtocolType.*;
 
@@ -35,9 +33,9 @@ public class Utils {
         ConnectInfo connectInfo = new ConnectInfo();
 
         try {
-            log.debug("connect url" + host.getConnectUrl());
-            URI url = new URI(host.getConnectUrl());
-            String protocol = url.getScheme();
+            log.debug("connect uri" + host.getConnectUrl());
+            URI uri = new URI(host.getConnectUrl());
+            String protocol = uri.getScheme();
             if (StringUtils.hasText(protocol)) {
                 if ("scp".equalsIgnoreCase(protocol)) {
                     connectInfo.setProtocol(SCP);
@@ -50,21 +48,21 @@ public class Utils {
                 connectInfo.setProtocol(SCP);
             }
 
-            connectInfo.setHost(url.getHost());
+            connectInfo.setHost(uri.getHost());
 
-            int port = url.getPort();
+            int port = uri.getPort();
             if (port == -1) {
                 connectInfo.setPort(SSH_PORT);
             } else {
                 connectInfo.setPort(port);
             }
 
-            String path = url.getPath();
+            String path = uri.getPath();
             if (StringUtils.hasText(path)) {
                 connectInfo.setPath(path);
             }
 
-            connectInfo.setUsername(host.getUsername());
+            connectInfo.setUsername(uri.getUserInfo());
             connectInfo.setPassword(host.getPassword());
 
         } catch (URISyntaxException e) {
@@ -114,8 +112,9 @@ public class Utils {
             if (log.isErrorEnabled()) {
                 log.error(e, e);
             }
+        } finally {
+            sshClient.disconnect();
         }
-        sshClient.disconnect();
         return false;
     }
 }
