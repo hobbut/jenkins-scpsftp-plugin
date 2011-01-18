@@ -29,6 +29,8 @@ import ru.hobbut.hudson.utils.Utils;
 
 import javax.servlet.ServletException;
 import java.io.IOException;
+import java.io.PrintStream;
+import java.io.PrintWriter;
 import java.util.ArrayList;
 import java.util.Iterator;
 import java.util.List;
@@ -75,12 +77,12 @@ public class ScpSftpPublisher extends Publisher {
         Result result = Result.SUCCESS;
 
         for (HostWithEntries hostWithEntries : hostsWithEntries) {
-            log.error("proceed:"+hostWithEntries.getConnectUrl());
+            logConsole(listener.getLogger(), "proceed:" + hostWithEntries.getConnectUrl());
             try {
                 Host host = getHost(hostWithEntries.getConnectUrl());
                 if (host == null) {
                     build.setResult(Result.UNSTABLE);
-                    log.error("Cannot find host:" + hostWithEntries.getConnectUrl());
+                    logConsole(listener.getLogger(), "Cannot find host:" + hostWithEntries.getConnectUrl());
                     continue;
                 }
                 String expandedSrcPath = Util.replaceMacro(hostWithEntries.getSrcPath(), build.getEnvironment(listener));
@@ -88,15 +90,20 @@ public class ScpSftpPublisher extends Publisher {
                 FilePath ws = build.getWorkspace();
                 FilePath[] src = ws.list(expandedSrcPath);
 
-                log.error("src:" + expandedSrcPath);
-                log.error("dst:" + expandedDstPath);
                 if (src.length == 0) {
-                    log.error("no files found at:" + hostWithEntries.getSrcPath());
+                    logConsole(listener.getLogger(), "no files found at:" + hostWithEntries.getSrcPath());
                     continue;
                 }
 
                 for (FilePath filePath : src) {
-                    log.error("move file from:" + filePath.getRemote() + " to:" + expandedDstPath);
+                    if (!Utils.uploadFile(filePath.getRemote(), expandedDstPath, host)) {
+                        result = Result.UNSTABLE;
+                        logConsole(listener.getLogger(), String.format("Error upload %s to %s", filePath.getRemote(),
+                                host.getConnectUrl()));
+                    } else {
+                        logConsole(listener.getLogger(), String.format("Successfully uploaded %s to %s",
+                                filePath.getRemote(), host.getConnectUrl()));
+                    }
                 }
 
 
@@ -133,9 +140,8 @@ public class ScpSftpPublisher extends Publisher {
             if (StringUtils.hasText(connectUrl)) {
                 return null;
             }
-            log.error("finding host:" + connectUrl);
+
             for (Host host : hosts) {
-                log.error("h>>" + host);
                 if (connectUrl.equals(host.getConnectUrl())) {
                     return host;
                 }
@@ -145,27 +151,6 @@ public class ScpSftpPublisher extends Publisher {
 
         @Override
         public Publisher newInstance(StaplerRequest req, JSONObject formData) throws FormException {
-            /*JSONArray hosts = formData.getJSONArray("hostsWithEntries");
-            log.error("" + formData);
-            log.error("" + hosts);
-            List<HostWithEntries> hostWithEntriesList = new ArrayList<HostWithEntries>();
-            for (Object o : hosts) {
-                log.error("" + o);
-                String connectUrl = ((JSONObject) o).getString("connectUrl");
-                log.error("connUrl>>" + connectUrl);
-                JSONObject entriesJson = ((JSONObject) o).getJSONObject("entries");
-                List<Entry> entries;
-                if (entriesJson != null && !entriesJson.isNullObject()) {
-                    entries = req.bindJSON(List.class, entriesJson);
-                    log.error("entries>>" + entries);
-                } else {
-                    entries = new ArrayList<Entry>();
-                }
-                hostWithEntriesList.add(new HostWithEntries(connectUrl, entries));
-            }
-            log.error("" + hostWithEntriesList);
-            return new ScpSftpPublisher(hostWithEntriesList);*/
-            log.error("" + formData);
             return req.bindJSON(ScpSftpPublisher.class, formData);
         }
 
@@ -178,12 +163,10 @@ public class ScpSftpPublisher extends Publisher {
 
         public DescriptorImpl(Class<? extends Publisher> clazz) {
             super(clazz);
-            log.debug(hosts);
         }
 
         public DescriptorImpl() {
             load();
-            log.debug(hosts);
         }
 
         public Host getHost(String connectionUrl) {
@@ -205,9 +188,7 @@ public class ScpSftpPublisher extends Publisher {
         public FormValidation doTestConnection(StaplerRequest req, StaplerResponse rsp,
                                                @QueryParameter("scp.connectUrl") String connectUrl,
                                                @QueryParameter("scp.password") String password) {
-            log.error("" + req.getParameterMap());
             Host host = new Host(connectUrl, password);
-            log.error("" + connectUrl);
             try {
                 ConnectInfo connectInfo = Utils.getConnectInfo(host);
                 return Utils.checkAuthentication(connectInfo) ? FormValidation.ok("Connection ok") : FormValidation.error("Authentication failed");
@@ -215,5 +196,9 @@ public class ScpSftpPublisher extends Publisher {
                 return FormValidation.error(e.getMessage(), e);
             }
         }
+    }
+
+    public static void logConsole(PrintStream logger, String message) {
+        Utils.logConsole(logger, message);
     }
 }
