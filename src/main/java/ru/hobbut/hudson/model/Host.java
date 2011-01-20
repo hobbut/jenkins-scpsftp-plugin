@@ -1,5 +1,7 @@
 package ru.hobbut.hudson.model;
 
+import org.kohsuke.stapler.DataBoundConstructor;
+
 /**
  * Created by IntelliJ IDEA.
  * User: hobbut
@@ -11,6 +13,7 @@ public class Host {
     private String connectUrl;
     private String password;
     private String keyfilePath;
+    private boolean enable;
 
     public String getConnectUrl() {
         return connectUrl;
@@ -39,15 +42,20 @@ public class Host {
         this.keyfilePath = keyfilePath;
     }
 
-    public Host(String connectUrl, String password) {
-        this.connectUrl = connectUrl;
-        this.password = password;
+    public boolean isEnable() {
+        return enable;
     }
 
-    public Host(String connectUrl, String password, String keyfilePath) {
+    public void setEnable(boolean enable) {
+        this.enable = enable;
+    }
+
+    @DataBoundConstructor
+    public Host(String connectUrl, String password, String keyfilePath, boolean enable) {
         this.connectUrl = connectUrl;
         this.password = password;
         this.keyfilePath = keyfilePath;
+        this.enable = enable;
     }
 
     public String getName() {

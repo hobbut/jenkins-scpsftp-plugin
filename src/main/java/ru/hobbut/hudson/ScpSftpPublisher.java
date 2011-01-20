@@ -19,12 +19,15 @@ import ru.hobbut.hudson.model.Host;
 import ru.hobbut.hudson.model.HostWithEntries;
 import ru.hobbut.hudson.utils.ConnectInfo;
 import ru.hobbut.hudson.utils.PluginException;
+import ru.hobbut.hudson.utils.UploadCallable;
 import ru.hobbut.hudson.utils.Utils;
 
-import java.io.IOException;
 import java.io.PrintStream;
 import java.util.ArrayList;
+import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
+import java.util.concurrent.*;
 
 /**
  * Created by IntelliJ IDEA.
@@ -58,54 +61,64 @@ public class ScpSftpPublisher extends Publisher {
         return DESCRIPTOR.getHost(connectUrl);
     }
 
+    private Map<Host, List<HostWithEntries>> getEntriesByHost(AbstractBuild build, Launcher launcher, BuildListener listener) {
+        Map<Host, List<HostWithEntries>> map = new HashMap<Host, List<HostWithEntries>>();
+
+        for (HostWithEntries hostWithEntries : hostsWithEntries) {
+            Host host = getHost(hostWithEntries.getConnectUrl());
+            if (host == null) {
+                build.setResult(Result.UNSTABLE);
+                logConsole(listener.getLogger(), "Cannot find host:" + hostWithEntries.getConnectUrl());
+                continue;
+            }
+            List<HostWithEntries> list = map.get(host);
+            if (list == null) {
+                list = new ArrayList<HostWithEntries>();
+            }
+            list.add(hostWithEntries);
+            map.put(host, list);
+        }
+        return map;
+    }
+
     @Override
     public boolean perform(AbstractBuild build, Launcher launcher, BuildListener listener) {
         if (build.getResult() == Result.FAILURE) {
             // build failed. don't post
             return true;
         }
-
         Result result = Result.SUCCESS;
 
-        for (HostWithEntries hostWithEntries : hostsWithEntries) {
-            logConsole(listener.getLogger(), "proceed:" + hostWithEntries.getConnectUrl());
-            try {
-                Host host = getHost(hostWithEntries.getConnectUrl());
-                if (host == null) {
-                    build.setResult(Result.UNSTABLE);
-                    logConsole(listener.getLogger(), "Cannot find host:" + hostWithEntries.getConnectUrl());
-                    continue;
-                }
-                String expandedSrcPath = Util.replaceMacro(hostWithEntries.getSrcPath(), build.getEnvironment(listener));
-                String expandedDstPath = Util.replaceMacro(hostWithEntries.getDstPath(), build.getEnvironment(listener)).trim();
-                FilePath ws = build.getWorkspace();
-                FilePath[] src = ws.list(expandedSrcPath);
+        Map<String, Host> hostMap = new HashMap<String, Host>();
+        Map<Host, List<HostWithEntries>> map = getEntriesByHost(build, launcher, listener);
 
-                if (src.length == 0) {
-                    logConsole(listener.getLogger(), "no files found at:" + hostWithEntries.getSrcPath());
-                    continue;
-                }
+        ExecutorService executorService = Executors.newFixedThreadPool(DESCRIPTOR.isConcurrentUpload() ? map.size() : 1);
 
-                for (FilePath filePath : src) {
-                    if (!Utils.uploadFile(filePath.getRemote(), expandedDstPath, host)) {
-                        result = Result.UNSTABLE;
-                        logConsole(listener.getLogger(), String.format("Error upload %s to %s", filePath.getRemote(),
-                                host.getConnectUrl()));
-                    } else {
-                        logConsole(listener.getLogger(), String.format("Successfully uploaded %s to %s",
-                                filePath.getRemote(), host.getConnectUrl()));
-                    }
-                }
+        List<Callable<Map<HostWithEntries, Boolean>>> calls = new ArrayList<Callable<Map<HostWithEntries, Boolean>>>();
 
-
-            } catch (InterruptedException e) {
-                e.printStackTrace(listener.error("error"));
-                result = Result.UNSTABLE;
-            } catch (IOException e) {
-                e.printStackTrace(listener.error("error"));
-                result = Result.UNSTABLE;
-            }
+        for (Host host : map.keySet()) {
+            calls.add(new UploadCallable(map.get(host), host, build, listener));
         }
+
+        try {
+            List<Future<Map<HostWithEntries, Boolean>>> list = executorService.invokeAll(calls);
+            for (Future<Map<HostWithEntries, Boolean>> future : list) {
+                try {
+                    Map<HostWithEntries, Boolean> results = future.get();
+                    if (results.containsValue(false)) {
+                        result = Result.UNSTABLE;
+                        break;
+                    }
+                } catch (ExecutionException e) {
+                    e.printStackTrace(listener.error("error"));
+                    result = Result.UNSTABLE;
+                }
+            }
+        } catch (InterruptedException e) {
+            e.printStackTrace(listener.error("error"));
+            result = Result.UNSTABLE;
+        }
+
         build.setResult(result);
         return true;
     }
@@ -117,6 +130,8 @@ public class ScpSftpPublisher extends Publisher {
 
         private final CopyOnWriteList<Host> hosts = new CopyOnWriteList<Host>();
 
+        private boolean concurrentUpload;
+
         @Override
         public boolean isApplicable(Class<? extends AbstractProject> aClass) {
             return true;
@@ -125,6 +140,14 @@ public class ScpSftpPublisher extends Publisher {
         @Override
         public String getDisplayName() {
             return "SCP SFTP Publisher";
+        }
+
+        public boolean isConcurrentUpload() {
+            return concurrentUpload;
+        }
+
+        public void setConcurrentUpload(boolean concurrentUpload) {
+            this.concurrentUpload = concurrentUpload;
         }
 
         private Host findHost(String connectUrl) {
@@ -147,6 +170,9 @@ public class ScpSftpPublisher extends Publisher {
 
         @Override
         public boolean configure(StaplerRequest req, JSONObject json) throws FormException {
+            logger.debug("json " + json.toString());
+            logger.debug("parameters " + req.getParameterMap());
+            req.bindParameters(this, "adv.");
             hosts.replaceBy(req.bindParametersToList(Host.class, "scp."));
             save();
             return true;
@@ -180,7 +206,7 @@ public class ScpSftpPublisher extends Publisher {
                                                @QueryParameter("scp.connectUrl") String connectUrl,
                                                @QueryParameter("scp.password") String password,
                                                @QueryParameter("scp.keyfilePath") String keyfile) {
-            Host host = new Host(connectUrl, password, keyfile);
+            Host host = new Host(connectUrl, password, keyfile, true);
             try {
                 ConnectInfo connectInfo = Utils.getConnectInfo(host);
                 return Utils.checkAuthentication(connectInfo) ? FormValidation.ok("Connection ok") : FormValidation.error("Authentication failed");

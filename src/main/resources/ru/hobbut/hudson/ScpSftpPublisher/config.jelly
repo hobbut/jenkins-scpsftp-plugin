@@ -28,6 +28,9 @@
                         <f:entry title="${%Destination}">
                             <f:textbox name="entry.dstPath" value="${host.dstPath}"/>
                         </f:entry>
+                        <f:entry title="${%Enabled}">
+                            <f:checkbox name="entry.enable" checked="${host.enable}" />
+                        </f:entry>
                         <f:entry title="">
                             <div align="right">
                                 <f:repeatableDeleteButton/>

@@ -20,7 +20,7 @@ public class UtilsTest extends TestCase {
         info.setUsername("a");
         info.setPassword("b");
 
-        ConnectInfo connectInfo = Utils.getConnectInfo(new Host("scp://a@10.0.1.4:10022/home/staff/hudson", "b", null));
+        ConnectInfo connectInfo = Utils.getConnectInfo(new Host("scp://a@10.0.1.4:10022/home/staff/hudson", "b", null, true));
 
         System.out.println(info);
         System.out.println(connectInfo);

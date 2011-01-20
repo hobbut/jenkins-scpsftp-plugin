@@ -2,19 +2,18 @@ package ru.hobbut.hudson.model;
 
 import org.kohsuke.stapler.DataBoundConstructor;
 
-import java.util.List;
-
 /**
  * Created by IntelliJ IDEA.
  * User: hobbut
  * Date: 14.01.11
  * Time: 21:32
- * To change this template use File | Settings | File Templates.
  */
+
 public class HostWithEntries {
     private String connectUrl;
     private String srcPath;
     private String dstPath;
+    private boolean enable = true;
 
     public String getConnectUrl() {
         return connectUrl;
@@ -40,10 +39,19 @@ public class HostWithEntries {
         this.dstPath = dstPath;
     }
 
+    public boolean isEnable() {
+        return enable;
+    }
+
+    public void setEnable(boolean enable) {
+        this.enable = enable;
+    }
+
     @DataBoundConstructor
-    public HostWithEntries(String connectUrl, String srcPath, String dstPath) {
+    public HostWithEntries(String connectUrl, String srcPath, String dstPath, boolean enable) {
         this.connectUrl = connectUrl;
         this.srcPath = srcPath;
         this.dstPath = dstPath;
+        this.enable = enable;
     }
 }

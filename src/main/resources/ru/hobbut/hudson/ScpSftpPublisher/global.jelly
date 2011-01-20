@@ -16,6 +16,7 @@
     <f:section title="${%SCP repository hosts}">
         <f:entry title="${%SCP sites}"
                  description="${%SCP sites that projects will want to connect}">
+
             <f:repeatable var="host" items="${descriptor.hosts}">
                 <table width="100%">
                     <f:entry title="${%Connect url}">
@@ -28,20 +29,26 @@
                     <f:entry title="${%Keyfile}">
                         <f:textbox name="scp.keyfilePath" value="${host.keyfilePath}"/>
                     </f:entry>
-                    <f:entry title="">
-                        <div align="left">
-                            <f:validateButton
-                                    title="${%Test Connection}" progress="${%Testing...}"
-                                    method="testConnection" with="scp.connectUrl,scp.password,scp.keyfilePath"/>
-                        </div>
+                    <f:entry title="${%Enabled}">
+                        <f:checkbox name="scp.enable" checked="${host.enable}"/>
                     </f:entry>
                     <f:entry title="">
-                        <div align="right">
+                        <f:validateButton
+                                title="${%Test Connection}" progress="${%Testing...}"
+                                method="testConnection" with="scp.connectUrl,scp.password,scp.keyfilePath"/>
+                    </f:entry>
+                    <f:entry title="">
+                        <div style="float:right">
                             <f:repeatableDeleteButton/>
                         </div>
                     </f:entry>
                 </table>
             </f:repeatable>
         </f:entry>
+        <f:advanced>
+                <f:entry title="${%Concurrent upload}">
+                    <f:checkbox name="adv.concurrentUpload" checked="${descriptor.concurrentUpload}"></f:checkbox>
+                </f:entry>
+        </f:advanced>
     </f:section>
 </j:jelly>
