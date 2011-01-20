@@ -2,24 +2,18 @@ package ru.hobbut.hudson;
 
 import hudson.*;
 import hudson.model.*;
-import hudson.slaves.EnvironmentVariablesNodeProperty;
-import hudson.slaves.NodeProperty;
-import hudson.slaves.NodePropertyDescriptor;
 import hudson.tasks.BuildStepDescriptor;
 import hudson.tasks.BuildStepMonitor;
 import hudson.tasks.Publisher;
 import hudson.util.CopyOnWriteList;
-import hudson.util.DescribableList;
 import hudson.util.FormValidation;
-import net.sf.json.JSON;
-import net.sf.json.JSONArray;
 import net.sf.json.JSONObject;
-import org.apache.commons.logging.Log;
-import org.apache.commons.logging.LogFactory;
 import org.kohsuke.stapler.DataBoundConstructor;
 import org.kohsuke.stapler.QueryParameter;
 import org.kohsuke.stapler.StaplerRequest;
 import org.kohsuke.stapler.StaplerResponse;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.util.StringUtils;
 import ru.hobbut.hudson.model.Host;
 import ru.hobbut.hudson.model.HostWithEntries;
@@ -27,12 +21,9 @@ import ru.hobbut.hudson.utils.ConnectInfo;
 import ru.hobbut.hudson.utils.PluginException;
 import ru.hobbut.hudson.utils.Utils;
 
-import javax.servlet.ServletException;
 import java.io.IOException;
 import java.io.PrintStream;
-import java.io.PrintWriter;
 import java.util.ArrayList;
-import java.util.Iterator;
 import java.util.List;
 
 /**
@@ -43,7 +34,7 @@ import java.util.List;
  */
 public class ScpSftpPublisher extends Publisher {
 
-    private static final Log log = LogFactory.getLog(ScpSftpPublisher.class);
+    private static final Logger logger = LoggerFactory.getLogger(ScpSftpPublisher.class);
 
     private List<HostWithEntries> hostsWithEntries;
 
@@ -108,10 +99,10 @@ public class ScpSftpPublisher extends Publisher {
 
 
             } catch (InterruptedException e) {
-                e.printStackTrace(listener.error("error"));  //To change body of catch statement use File | Settings | File Templates.
+                e.printStackTrace(listener.error("error"));
                 result = Result.UNSTABLE;
             } catch (IOException e) {
-                e.printStackTrace(listener.error("error"));  //To change body of catch statement use File | Settings | File Templates.
+                e.printStackTrace(listener.error("error"));
                 result = Result.UNSTABLE;
             }
         }
@@ -187,8 +178,9 @@ public class ScpSftpPublisher extends Publisher {
 
         public FormValidation doTestConnection(StaplerRequest req, StaplerResponse rsp,
                                                @QueryParameter("scp.connectUrl") String connectUrl,
-                                               @QueryParameter("scp.password") String password) {
-            Host host = new Host(connectUrl, password);
+                                               @QueryParameter("scp.password") String password,
+                                               @QueryParameter("scp.keyfilePath") String keyfile) {
+            Host host = new Host(connectUrl, password, keyfile);
             try {
                 ConnectInfo connectInfo = Utils.getConnectInfo(host);
                 return Utils.checkAuthentication(connectInfo) ? FormValidation.ok("Connection ok") : FormValidation.error("Authentication failed");
@@ -196,6 +188,7 @@ public class ScpSftpPublisher extends Publisher {
                 return FormValidation.error(e.getMessage(), e);
             }
         }
+
     }
 
     public static void logConsole(PrintStream logger, String message) {

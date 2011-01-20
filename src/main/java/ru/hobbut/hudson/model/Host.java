@@ -10,6 +10,7 @@ public class Host {
 
     private String connectUrl;
     private String password;
+    private String keyfilePath;
 
     public String getConnectUrl() {
         return connectUrl;
@@ -30,9 +31,23 @@ public class Host {
         this.password = password;
     }
 
+    public String getKeyfilePath() {
+        return keyfilePath;
+    }
+
+    public void setKeyfilePath(String keyfilePath) {
+        this.keyfilePath = keyfilePath;
+    }
+
     public Host(String connectUrl, String password) {
         this.connectUrl = connectUrl;
         this.password = password;
+    }
+
+    public Host(String connectUrl, String password, String keyfilePath) {
+        this.connectUrl = connectUrl;
+        this.password = password;
+        this.keyfilePath = keyfilePath;
     }
 
     public String getName() {

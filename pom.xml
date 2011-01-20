@@ -31,14 +31,34 @@
 
     <dependencies>
         <dependency>
-            <groupId>sshtools</groupId>
-            <artifactId>j2ssh-core</artifactId>
-            <version>0.2.9</version>
+            <groupId>net.schmizz</groupId>
+            <artifactId>sshj</artifactId>
+            <version>0.3.0</version>
         </dependency>
         <dependency>
             <groupId>junit</groupId>
             <artifactId>junit</artifactId>
             <version>3.8.2</version>
+        </dependency>
+        <dependency>
+            <groupId>org.bouncycastle</groupId>
+            <artifactId>bcprov-jdk16</artifactId>
+            <version>1.45</version>
+        </dependency>
+        <dependency>
+            <groupId>com.jcraft</groupId>
+            <artifactId>jzlib</artifactId>
+            <version>1.0.7</version>
+        </dependency>
+        <dependency>
+            <groupId>ch.qos.logback</groupId>
+            <artifactId>logback-core</artifactId>
+            <version>0.9.24</version>
+        </dependency>
+        <dependency>
+            <groupId>ch.qos.logback</groupId>
+            <artifactId>logback-classic</artifactId>
+            <version>0.9.24</version>
         </dependency>
     </dependencies>
 

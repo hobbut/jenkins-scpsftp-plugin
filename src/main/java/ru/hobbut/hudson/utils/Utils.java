@@ -1,15 +1,15 @@
 package ru.hobbut.hudson.utils;
 
-import com.sshtools.j2ssh.ScpClient;
-import com.sshtools.j2ssh.SftpClient;
-import com.sshtools.j2ssh.SshClient;
-import com.sshtools.j2ssh.authentication.AuthenticationProtocolState;
-import com.sshtools.j2ssh.authentication.PasswordAuthenticationClient;
-import com.sshtools.j2ssh.authentication.SshAuthenticationClient;
-import com.sshtools.j2ssh.transport.IgnoreHostKeyVerification;
+import net.schmizz.sshj.SSHClient;
+import net.schmizz.sshj.transport.TransportException;
+import net.schmizz.sshj.transport.verification.PromiscuousVerifier;
+import net.schmizz.sshj.userauth.UserAuthException;
+import net.schmizz.sshj.userauth.keyprovider.*;
+import net.schmizz.sshj.userauth.method.*;
+import net.schmizz.sshj.userauth.password.PasswordUtils;
 import org.apache.commons.io.FilenameUtils;
-import org.apache.commons.logging.Log;
-import org.apache.commons.logging.LogFactory;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.util.StringUtils;
 import ru.hobbut.hudson.model.Host;
 
@@ -18,8 +18,11 @@ import java.io.IOException;
 import java.io.PrintStream;
 import java.net.URI;
 import java.net.URISyntaxException;
+import java.util.ArrayList;
+import java.util.List;
 
 import static ru.hobbut.hudson.utils.ConnectInfo.ProtocolType.*;
+import static ru.hobbut.hudson.utils.ConnectInfo.AuthType.*;
 
 /**
  * Created by IntelliJ IDEA.
@@ -31,10 +34,10 @@ public class Utils {
 
     private static final int SSH_PORT = 22;
 
-    private static final Log log = LogFactory.getLog(Utils.class);
+    private static final Logger log = LoggerFactory.getLogger(Utils.class);
 
     public static final String LOG_PREFIX = "[SCPSFTP] ";
-
+    private static final int CONNECT_TIMEOUT = 10000;
 
     public static ConnectInfo getConnectInfo(Host host) {
         ConnectInfo connectInfo = new ConnectInfo();
@@ -69,74 +72,94 @@ public class Utils {
                 connectInfo.setPath(path);
             }
 
+            if (StringUtils.hasText(host.getKeyfilePath())) {
+                connectInfo.setKeyfilePath(host.getKeyfilePath());
+                connectInfo.setAuthType(KEYFILE);
+            }
+
             connectInfo.setUsername(uri.getUserInfo());
             connectInfo.setPassword(host.getPassword());
 
         } catch (URISyntaxException e) {
-            log.error(e, e);
+            log.error(e.getMessage(), e);
             throw new PluginException("malformed url", e);
         }
 
         return connectInfo;
     }
 
-    private static SshAuthenticationClient getAuthenticationClient(ConnectInfo connectInfo) {
-        //todo implement more authentications. password only
-        SshAuthenticationClient client;
-        switch (connectInfo.getAuthType()) {
-            case PASSWORD:
-                client = new PasswordAuthenticationClient();
-                client.setUsername(connectInfo.getUsername());
-                ((PasswordAuthenticationClient) client).setPassword(connectInfo.getPassword());
-                break;
-            default:
-                throw new PluginException("unsupported authentication");
-        }
-        return client;
-    }
-
-    private static SshClient getSshClient(ConnectInfo connectInfo) {
-        SshClient sshClient = new SshClient();
-        sshClient.setSocketTimeout(10000);
+    public static SSHClient getSshClient(ConnectInfo connectInfo) {
+        SSHClient sshClient = new SSHClient();
+        sshClient.addHostKeyVerifier(new PromiscuousVerifier());
+        sshClient.setTimeout(CONNECT_TIMEOUT);
         try {
-            sshClient.connect(connectInfo.getHost(), connectInfo.getPort(), new IgnoreHostKeyVerification());
+            sshClient.connect(connectInfo.getHost(), connectInfo.getPort());
         } catch (IOException e) {
             throw new PluginException("can't connect to host", e);
         }
         return sshClient;
     }
 
+    private static List<AuthMethod> getAuthMethods(SSHClient client, final ConnectInfo connectInfo) {
+        List<AuthMethod> authMethods = new ArrayList<AuthMethod>();
+        switch (connectInfo.getAuthType()) {
+            case PASSWORD:
+                char[] passwd = connectInfo.getPassword().toCharArray();
+                authMethods.add(new AuthPassword(PasswordUtils.createOneOff(passwd.clone())));
+                authMethods.add(new AuthKeyboardInteractive(new PasswordResponseProvider(PasswordUtils.createOneOff(passwd.clone()))));
+                break;
+            case KEYFILE:
+                KeyProvider keyProvider;
+                try {
+                    keyProvider = client.loadKeys(connectInfo.getKeyfilePath(), connectInfo.getPassword());
+                } catch (IOException e) {
+                    log.error(e.getMessage(), e);
+                    throw new PluginException("error reading keyfile");
+                }
+                AuthPublickey authPublickey = new AuthPublickey(keyProvider);
+                authMethods.add(authPublickey);
+                break;
+            default:
+                throw new PluginException("unsupported authentication");
+        }
+        return authMethods;
+    }
 
-    private static boolean authenticate(SshClient sshClient, SshAuthenticationClient sshAuthenticationClient) throws IOException {
-        int result = sshClient.authenticate(sshAuthenticationClient);
-        log.error("auth result" + result);
-        return result == AuthenticationProtocolState.COMPLETE;
+    private static boolean authenticate(SSHClient sshClient, ConnectInfo connectInfo) {
+        try {
+            sshClient.auth(connectInfo.getUsername(), getAuthMethods(sshClient, connectInfo));
+        } catch (UserAuthException e) {
+            log.error(e.getMessage(), e);
+            return false;
+        } catch (TransportException e) {
+            throw new PluginException("transport error", e);
+        }
+        return true;
+    }
+
+    private static void disconnectSshClient(SSHClient sshClient) {
+        try {
+            sshClient.disconnect();
+        } catch (IOException e) {
+            log.error(e.getMessage(), e);
+        }
     }
 
     public static boolean checkAuthentication(ConnectInfo connectInfo) {
-        SshAuthenticationClient client = getAuthenticationClient(connectInfo);
-        SshClient sshClient = getSshClient(connectInfo);
+        SSHClient sshClient = getSshClient(connectInfo);
         try {
-            return authenticate(sshClient, client);
-        } catch (IOException e) {
-            return false;
+            return authenticate(sshClient, connectInfo);
         } finally {
-            sshClient.disconnect();
+            disconnectSshClient(sshClient);
         }
     }
 
     public static boolean uploadFile(String localFile, String remotePath, Host host) {
-
         ConnectInfo connectInfo = getConnectInfo(host);
-        SshClient sshClient = getSshClient(connectInfo);
-        SshAuthenticationClient client = getAuthenticationClient(connectInfo);
+        SSHClient sshClient = getSshClient(connectInfo);
+
         //auth first
-        try {
-            if (!authenticate(sshClient, client)) {
-                log.error("auth failed");
-                return false;
-            }
-        } catch (IOException e) {
+        if (!authenticate(sshClient, connectInfo)) {
             log.error("auth failed");
             return false;
         }
@@ -151,13 +174,11 @@ public class Utils {
         try {
             switch (connectInfo.getProtocol()) {
                 case SCP: {
-                    ScpClient scpClient = sshClient.openScpClient();
-                    scpClient.put(localFile, remoteFilePath, originalFile.isDirectory());
+                    sshClient.newSCPFileTransfer().upload(localFile, remoteFilePath);
                     break;
                 }
                 case SFTP: {
-                    SftpClient sftpClient = sshClient.openSftpClient();
-                    sftpClient.put(localFile, remoteFilePath);
+                    sshClient.newSFTPClient().put(localFile, remoteFilePath);
                     break;
                 }
             }
@@ -165,9 +186,8 @@ public class Utils {
         } catch (IOException e) {
             return false;
         } finally {
-            sshClient.disconnect();
+            disconnectSshClient(sshClient);
         }
-
         return true;
     }
 

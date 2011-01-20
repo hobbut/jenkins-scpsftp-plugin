@@ -1,6 +1,7 @@
 package ru.hobbut.hudson.utils;
 
 import junit.framework.TestCase;
+import net.schmizz.sshj.SSHClient;
 import ru.hobbut.hudson.model.Host;
 
 /**
@@ -19,10 +20,11 @@ public class UtilsTest extends TestCase {
         info.setUsername("a");
         info.setPassword("b");
 
-        ConnectInfo connectInfo = Utils.getConnectInfo(new Host("scp://10.0.1.4:10022/home/staff/hudson", "a", "b"));
+        ConnectInfo connectInfo = Utils.getConnectInfo(new Host("scp://a@10.0.1.4:10022/home/staff/hudson", "b", null));
 
         System.out.println(info);
         System.out.println(connectInfo);
         assertEquals(info, connectInfo);
     }
+
 }

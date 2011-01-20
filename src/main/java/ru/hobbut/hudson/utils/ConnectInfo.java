@@ -13,7 +13,7 @@ public class ConnectInfo {
     }
 
     public static enum AuthType {
-        PASSWORD,
+        PASSWORD, KEYFILE
     }
 
     ConnectInfo() {
@@ -25,6 +25,7 @@ public class ConnectInfo {
     private ProtocolType protocol;
     private String username;
     private String password;
+    private String keyfilePath;
     private AuthType authType = AuthType.PASSWORD;
 
     public String getHost() {
@@ -83,6 +84,14 @@ public class ConnectInfo {
         this.authType = authType;
     }
 
+    public String getKeyfilePath() {
+        return keyfilePath;
+    }
+
+    public void setKeyfilePath(String keyfilePath) {
+        this.keyfilePath = keyfilePath;
+    }
+
     @Override
     public boolean equals(Object o) {
         if (this == o) return true;
@@ -93,6 +102,7 @@ public class ConnectInfo {
         if (port != that.port) return false;
         if (authType != that.authType) return false;
         if (host != null ? !host.equals(that.host) : that.host != null) return false;
+        if (keyfilePath != null ? !keyfilePath.equals(that.keyfilePath) : that.keyfilePath != null) return false;
         if (password != null ? !password.equals(that.password) : that.password != null) return false;
         if (path != null ? !path.equals(that.path) : that.path != null) return false;
         if (protocol != that.protocol) return false;
@@ -109,6 +119,7 @@ public class ConnectInfo {
         result = 31 * result + (protocol != null ? protocol.hashCode() : 0);
         result = 31 * result + (username != null ? username.hashCode() : 0);
         result = 31 * result + (password != null ? password.hashCode() : 0);
+        result = 31 * result + (keyfilePath != null ? keyfilePath.hashCode() : 0);
         result = 31 * result + (authType != null ? authType.hashCode() : 0);
         return result;
     }
@@ -122,6 +133,7 @@ public class ConnectInfo {
                 ", protocol=" + protocol +
                 ", username='" + username + '\'' +
                 ", password='" + password + '\'' +
+                ", keyfilePath='" + keyfilePath + '\'' +
                 ", authType=" + authType +
                 '}';
     }
