@@ -161,6 +161,7 @@ public class Utils {
         //auth first
         if (!authenticate(sshClient, connectInfo)) {
             log.error("auth failed");
+            disconnectSshClient(sshClient);
             return false;
         }
 
