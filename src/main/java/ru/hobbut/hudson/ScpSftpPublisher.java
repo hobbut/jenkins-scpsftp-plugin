@@ -92,14 +92,13 @@ public class ScpSftpPublisher extends Publisher {
         Map<String, Host> hostMap = new HashMap<String, Host>();
         Map<Host, List<HostWithEntries>> map = getEntriesByHost(build, launcher, listener);
 
-        ExecutorService executorService = Executors.newFixedThreadPool(DESCRIPTOR.isConcurrentUpload() ? map.size() : 1);
-
         List<Callable<Map<HostWithEntries, Boolean>>> calls = new ArrayList<Callable<Map<HostWithEntries, Boolean>>>();
 
         for (Host host : map.keySet()) {
             calls.add(new UploadCallable(map.get(host), host, build, listener));
         }
 
+        ExecutorService executorService = Executors.newFixedThreadPool(DESCRIPTOR.isConcurrentUpload() ? map.size() : 1);
         try {
             List<Future<Map<HostWithEntries, Boolean>>> list = executorService.invokeAll(calls);
             for (Future<Map<HostWithEntries, Boolean>> future : list) {
@@ -117,6 +116,8 @@ public class ScpSftpPublisher extends Publisher {
         } catch (InterruptedException e) {
             e.printStackTrace(listener.error("error"));
             result = Result.UNSTABLE;
+        } finally {
+            executorService.shutdown();
         }
 
         build.setResult(result);
