@@ -125,19 +125,20 @@ public class Utils {
         return authMethods;
     }
 
-    private static boolean authenticate(SSHClient sshClient, ConnectInfo connectInfo) {
+    public static boolean authenticate(SSHClient sshClient, ConnectInfo connectInfo) {
         try {
             sshClient.auth(connectInfo.getUsername(), getAuthMethods(sshClient, connectInfo));
         } catch (UserAuthException e) {
             log.error(e.getMessage(), e);
             return false;
         } catch (TransportException e) {
+            log.error(e.getMessage(), e);
             throw new PluginException("transport error", e);
         }
         return true;
     }
 
-    private static void disconnectSshClient(SSHClient sshClient) {
+    public static void disconnectSshClient(SSHClient sshClient) {
         try {
             sshClient.disconnect();
         } catch (IOException e) {
@@ -154,6 +155,27 @@ public class Utils {
         }
     }
 
+    public static boolean uploadFile(String localFile, String remotePath, ConnectInfo connectInfo, SSHClient sshClient) throws IOException {
+        File originalFile = new File(localFile);
+        log.error("remote host path:" + connectInfo.getPath());
+        String remoteFilePath = FilenameUtils.normalize(connectInfo.getPath() + remotePath);
+        remoteFilePath = FilenameUtils.concat(remoteFilePath, originalFile.getName());
+        log.error("full remote path:" + remoteFilePath);
+
+        switch (connectInfo.getProtocol()) {
+            case SCP: {
+                sshClient.newSCPFileTransfer().upload(localFile, remoteFilePath);
+                break;
+            }
+            case SFTP: {
+                sshClient.newSFTPClient().put(localFile, remoteFilePath);
+                break;
+            }
+        }
+
+        return true;
+    }
+
     public static boolean uploadFile(String localFile, String remotePath, Host host) {
         ConnectInfo connectInfo = getConnectInfo(host);
         SSHClient sshClient = getSshClient(connectInfo);
@@ -165,25 +187,8 @@ public class Utils {
             return false;
         }
 
-        File originalFile = new File(localFile);
-        log.error("remote host path:" + connectInfo.getPath());
-        String remoteFilePath = FilenameUtils.normalize(connectInfo.getPath() + remotePath);
-        remoteFilePath = FilenameUtils.concat(remoteFilePath, originalFile.getName());
-
-        log.error("full remote path:" + remoteFilePath);
-
         try {
-            switch (connectInfo.getProtocol()) {
-                case SCP: {
-                    sshClient.newSCPFileTransfer().upload(localFile, remoteFilePath);
-                    break;
-                }
-                case SFTP: {
-                    sshClient.newSFTPClient().put(localFile, remoteFilePath);
-                    break;
-                }
-            }
-
+            uploadFile(localFile, remotePath, connectInfo, sshClient);
         } catch (IOException e) {
             return false;
         } finally {
