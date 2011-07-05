@@ -63,6 +63,7 @@ public class Uploader {
                 Session.Command command = session.exec(sctipt);
                 printStream.println(IOUtils.readFully(command.getInputStream()).toString());
                 command.join(60, TimeUnit.SECONDS);
+                printStream.println("exit-status: " + command.getExitStatus());
                 return 0 == command.getExitStatus();
             } finally {
                 session.close();

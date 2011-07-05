@@ -11,7 +11,7 @@
 
     <groupId>ru.hobbut.hudson</groupId>
     <artifactId>scpsftp</artifactId>
-    <version>0.5-SNAPSHOT</version>
+    <version>0.5.1-SNAPSHOT</version>
     <packaging>hpi</packaging>
 
     <!-- get every artifact through maven.glassfish.org, which proxies all the artifacts that we need -->
