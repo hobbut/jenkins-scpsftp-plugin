@@ -13,6 +13,8 @@ import java.io.IOException;
 import java.io.PrintStream;
 import java.util.concurrent.TimeUnit;
 
+import static ru.hobbut.hudson.utils.Utils.logConsole;
+
 /**
  * Created by IntelliJ IDEA.
  * User: hobbut
@@ -56,12 +58,13 @@ public class Uploader {
         return true;
     }
 
-    public boolean executeScript(String sctipt) {
+    public boolean executeScript(String script) {
         try {
             Session session = sshClient.startSession();
             try {
-                Session.Command command = session.exec(sctipt);
-                printStream.println(IOUtils.readFully(command.getInputStream()).toString());
+                Session.Command command = session.exec(script);
+                logConsole(printStream, IOUtils.readFully(command.getInputStream()).toString("UTF-8"));
+                logConsole(printStream, IOUtils.readFully(command.getErrorStream()).toString("UTF-8"));
                 command.join(60, TimeUnit.SECONDS);
                 printStream.println("exit-status: " + command.getExitStatus());
                 return 0 == command.getExitStatus();

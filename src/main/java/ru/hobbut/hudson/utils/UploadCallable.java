@@ -98,7 +98,11 @@ public class UploadCallable implements Callable<Map<HostWithEntries, Boolean>> {
             }
             String postBuild = hostWithEntries.getPostBuildScript();
             if (postBuild != null && postBuild.length() > 0) {
-                res = uploader.executeScript(postBuild) && res;
+                logConsole(listener.getLogger(), String.format("Executing script '%s'", postBuild));
+                boolean res1 = uploader.executeScript(postBuild);
+                res = res && res1;
+            } else {
+                logConsole(listener.getLogger(), "no postbuild script");
             }
 
             map.put(hostWithEntries, res);
