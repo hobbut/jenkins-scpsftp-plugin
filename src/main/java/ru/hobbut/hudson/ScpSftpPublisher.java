@@ -36,7 +36,7 @@ import java.util.concurrent.*;
  * Date: 1/13/11
  * Time: 5:24 PM
  */
-public class ScpSftpPublisher extends Notifier {
+public class ScpSftpPublisher extends Publisher {
 
     private static final Logger logger = LoggerFactory.getLogger(ScpSftpPublisher.class);
 
@@ -166,7 +166,7 @@ public class ScpSftpPublisher extends Notifier {
         }
 
         @Override
-        public Notifier newInstance(StaplerRequest req, JSONObject formData) throws FormException {
+        public Publisher newInstance(StaplerRequest req, JSONObject formData) throws FormException {
             return req.bindJSON(ScpSftpPublisher.class, formData);
         }
 
