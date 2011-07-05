@@ -13,6 +13,7 @@ public class HostWithEntries {
     private String connectUrl;
     private String srcPath;
     private String dstPath;
+    private String postBuildScript;
     private boolean enable = true;
 
     public String getConnectUrl() {
@@ -47,11 +48,20 @@ public class HostWithEntries {
         this.enable = enable;
     }
 
+    public String getPostBuildScript() {
+        return postBuildScript;
+    }
+
+    public void setPostBuildScript(String postBuildScript) {
+        this.postBuildScript = postBuildScript;
+    }
+
     @DataBoundConstructor
-    public HostWithEntries(String connectUrl, String srcPath, String dstPath, boolean enable) {
+    public HostWithEntries(String connectUrl, String srcPath, String dstPath, String postBuildScript, boolean enable) {
         this.connectUrl = connectUrl;
         this.srcPath = srcPath;
         this.dstPath = dstPath;
+        this.postBuildScript = postBuildScript;
         this.enable = enable;
     }
 }

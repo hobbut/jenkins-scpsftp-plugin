@@ -68,7 +68,9 @@ public class UploadCallable implements Callable<Map<HostWithEntries, Boolean>> {
         Uploader uploader = new Uploader(sshClient, listener.getLogger(), connectInfo);
 
         for (HostWithEntries hostWithEntries : hostsWithEntries) {
-
+            if (!hostWithEntries.isEnable()) {
+                logConsole(listener.getLogger(), "Skipping disabled entry:" + hostWithEntries.getConnectUrl());
+            }
             String expandedSrcPath = Util.replaceMacro(hostWithEntries.getSrcPath(), build.getEnvironment(listener)).trim();
             String expandedDstPath = Util.replaceMacro(hostWithEntries.getDstPath(), build.getEnvironment(listener)).trim();
             FilePath ws = build.getWorkspace();
@@ -83,6 +85,7 @@ public class UploadCallable implements Callable<Map<HostWithEntries, Boolean>> {
                 try{
                     res = uploader.uploadFile(filePath.getRemote(), expandedDstPath);
                 } catch (IOException e) {
+                    log.error(e.getMessage(), e);
                     res = false;
                 }
                 if (res) {
@@ -92,6 +95,10 @@ public class UploadCallable implements Callable<Map<HostWithEntries, Boolean>> {
                     logConsole(listener.getLogger(), String.format("Error upload %s to %s", filePath.getRemote(),
                             host.getConnectUrl()));
                 }
+            }
+            String postBuild = hostWithEntries.getPostBuildScript();
+            if (postBuild != null && postBuild.length() > 0) {
+                res = uploader.executeScript(postBuild) && res;
             }
 
             map.put(hostWithEntries, res);

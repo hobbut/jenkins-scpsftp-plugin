@@ -1,6 +1,8 @@
 package ru.hobbut.hudson.utils;
 
 import net.schmizz.sshj.SSHClient;
+import net.schmizz.sshj.common.IOUtils;
+import net.schmizz.sshj.connection.channel.direct.Session;
 import net.schmizz.sshj.xfer.FileTransfer;
 import org.apache.commons.io.FilenameUtils;
 import org.slf4j.Logger;
@@ -9,6 +11,7 @@ import org.slf4j.LoggerFactory;
 import java.io.File;
 import java.io.IOException;
 import java.io.PrintStream;
+import java.util.concurrent.TimeUnit;
 
 /**
  * Created by IntelliJ IDEA.
@@ -51,5 +54,21 @@ public class Uploader {
         remoteFilePath = FilenameUtils.concat(remoteFilePath, originalFile.getName());
         fileTransfer.upload(localFile, remoteFilePath);
         return true;
+    }
+
+    public boolean executeScript(String sctipt) {
+        try {
+            Session session = sshClient.startSession();
+            try {
+                Session.Command command = session.exec(sctipt);
+                printStream.println(IOUtils.readFully(command.getInputStream()).toString());
+                command.join(60, TimeUnit.SECONDS);
+                return 0 == command.getExitStatus();
+            } finally {
+                session.close();
+            }
+        } catch (Exception e) {
+            throw new PluginException("cannot execute script", e);
+        }
     }
 }

@@ -4,6 +4,7 @@ import hudson.*;
 import hudson.model.*;
 import hudson.tasks.BuildStepDescriptor;
 import hudson.tasks.BuildStepMonitor;
+import hudson.tasks.Notifier;
 import hudson.tasks.Publisher;
 import hudson.util.CopyOnWriteList;
 import hudson.util.FormValidation;
@@ -35,7 +36,7 @@ import java.util.concurrent.*;
  * Date: 1/13/11
  * Time: 5:24 PM
  */
-public class ScpSftpPublisher extends Publisher {
+public class ScpSftpPublisher extends Notifier {
 
     private static final Logger logger = LoggerFactory.getLogger(ScpSftpPublisher.class);
 
@@ -165,7 +166,7 @@ public class ScpSftpPublisher extends Publisher {
         }
 
         @Override
-        public Publisher newInstance(StaplerRequest req, JSONObject formData) throws FormException {
+        public Notifier newInstance(StaplerRequest req, JSONObject formData) throws FormException {
             return req.bindJSON(ScpSftpPublisher.class, formData);
         }
 
@@ -179,7 +180,7 @@ public class ScpSftpPublisher extends Publisher {
             return true;
         }
 
-        public DescriptorImpl(Class<? extends Publisher> clazz) {
+        public DescriptorImpl(Class<? extends Notifier> clazz) {
             super(clazz);
         }
 

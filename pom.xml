@@ -4,7 +4,7 @@
     <parent>
         <groupId>org.jvnet.hudson.plugins</groupId>
         <artifactId>plugin</artifactId>
-        <version>1.377</version>
+        <version>1.391</version>
         <!-- which version of Hudson is this plugin built against? -->
         <relativePath>../pom.xml</relativePath>
     </parent>
@@ -33,7 +33,7 @@
         <dependency>
             <groupId>net.schmizz</groupId>
             <artifactId>sshj</artifactId>
-            <version>0.3.0</version>
+            <version>0.4.1</version>
         </dependency>
         <dependency>
             <groupId>junit</groupId>
