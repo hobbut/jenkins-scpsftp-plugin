@@ -3,7 +3,9 @@ jenkins-scpsftp-pub
 
 Jenkins scp/sftp publisher plugin.
 
--Jenkins credentials support (password and key-base authentication)
+  - SCP support
+  - SFTP support
+  - Jenkins credentials support (password and key-base authentication)
 
 Development
 ===========
