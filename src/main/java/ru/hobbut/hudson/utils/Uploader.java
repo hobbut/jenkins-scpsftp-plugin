@@ -23,8 +23,6 @@ import static ru.hobbut.hudson.utils.Utils.logConsole;
  */
 public class Uploader {
 
-    private final Logger log = LoggerFactory.getLogger(getClass());
-
     private SSHClient sshClient;
     private PrintStream printStream;
     private FileTransfer fileTransfer;
@@ -40,14 +38,13 @@ public class Uploader {
                 break;
             case SFTP:
                 try {
-                    fileTransfer = sshClient.newSFTPClient().getFileTansfer();
+                    fileTransfer = sshClient.newSFTPClient().getFileTransfer();
                 } catch (IOException e) {
                     throw new PluginException("cannot init sftp transfer", e);
                 }
                 break;
         }
         fileTransfer.setTransferListener(new MyTransferListener(printStream, connectInfo.getHost()));
-
     }
 
     public boolean uploadFile(String localFile, String remotePath) throws IOException {

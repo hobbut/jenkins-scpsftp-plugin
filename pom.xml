@@ -1,31 +1,52 @@
-<project xmlns="http://maven.apache.org/POM/4.0.0" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
-         xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/maven-v4_0_0.xsd">
+<project xmlns="http://maven.apache.org/POM/4.0.0" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/maven-v4_0_0.xsd">
     <modelVersion>4.0.0</modelVersion>
     <parent>
-        <groupId>org.jvnet.hudson.plugins</groupId>
+        <groupId>org.jenkins-ci.plugins</groupId>
         <artifactId>plugin</artifactId>
-        <version>1.391</version>
-        <!-- which version of Hudson is this plugin built against? -->
-        <relativePath>../pom.xml</relativePath>
+        <version>1.532.3</version>
+        <!-- which version of Jenkins is this plugin built against? Users must have at least this Jenkins version to use this plugin. -->
     </parent>
 
-    <groupId>ru.hobbut.hudson</groupId>
-    <artifactId>scpsftp</artifactId>
-    <version>0.5.2-SNAPSHOT</version>
+    <groupId>ru.hobbut.jenkins</groupId>
+    <artifactId>jenkins-scpsftp-pub</artifactId>
+    <version>0.6-SNAPSHOT</version>
     <packaging>hpi</packaging>
 
-    <!-- get every artifact through maven.glassfish.org, which proxies all the artifacts that we need -->
+    <developers>
+        <developer>
+            <name>Dmitriy Yakovlev</name>
+            <email>hobbut@gmail.com</email>
+            <url>https://github.com/hobbut/</url>
+            <timezone>UTC+4</timezone>
+        </developer>
+    </developers>
+
+    <scm>
+        <connection>scm:git:git://git@github.com:hobbut/hudson-scpsftp-plugin.git</connection>
+        <developerConnection>scm:git:git@github.com:hobbut/hudson-scpsftp-plugin.git</developerConnection>
+        <url>https://github.com/hobbut/jenkins-scpsftp-plugin</url>
+        <tag>HEAD</tag>
+    </scm>
+
+    <licenses>
+        <license>
+            <name>MIT License</name>
+            <url>http://opensource.org/licenses/MIT</url>
+        </license>
+    </licenses>
+
+    <!-- get every artifact through repo.jenkins-ci.org, which proxies all the artifacts that we need -->
     <repositories>
         <repository>
-            <id>m.g.o-public</id>
-            <url>http://maven.glassfish.org/content/groups/public/</url>
+            <id>repo.jenkins-ci.org</id>
+            <url>http://repo.jenkins-ci.org/public/</url>
         </repository>
     </repositories>
 
     <pluginRepositories>
         <pluginRepository>
-            <id>m.g.o-public</id>
-            <url>http://maven.glassfish.org/content/groups/public/</url>
+            <id>repo.jenkins-ci.org</id>
+            <url>http://repo.jenkins-ci.org/public/</url>
         </pluginRepository>
     </pluginRepositories>
 
@@ -33,32 +54,29 @@
         <dependency>
             <groupId>net.schmizz</groupId>
             <artifactId>sshj</artifactId>
-            <version>0.4.1</version>
-        </dependency>
-        <dependency>
-            <groupId>junit</groupId>
-            <artifactId>junit</artifactId>
-            <version>3.8.2</version>
+            <version>0.9.0</version>
         </dependency>
         <dependency>
             <groupId>org.bouncycastle</groupId>
             <artifactId>bcprov-jdk16</artifactId>
-            <version>1.45</version>
+            <version>1.46</version>
         </dependency>
         <dependency>
             <groupId>com.jcraft</groupId>
             <artifactId>jzlib</artifactId>
-            <version>1.0.7</version>
+            <version>1.1.2</version>
         </dependency>
         <dependency>
-            <groupId>ch.qos.logback</groupId>
-            <artifactId>logback-core</artifactId>
-            <version>0.9.24</version>
+            <groupId>org.jenkins-ci.plugins</groupId>
+            <artifactId>credentials</artifactId>
+            <version>1.9.4</version>
+            <optional>true</optional>
         </dependency>
         <dependency>
-            <groupId>ch.qos.logback</groupId>
-            <artifactId>logback-classic</artifactId>
-            <version>0.9.24</version>
+            <groupId>org.jenkins-ci.plugins</groupId>
+            <artifactId>ssh-credentials</artifactId>
+            <version>1.6.1</version>
+            <optional>true</optional>
         </dependency>
     </dependencies>
 

@@ -1,5 +1,7 @@
 package ru.hobbut.hudson.utils;
 
+import com.cloudbees.plugins.credentials.Credentials;
+
 /**
  * Created by IntelliJ IDEA.
  * User: hobbut
@@ -12,84 +14,38 @@ public class ConnectInfo {
         SCP, SFTP
     }
 
-    public static enum AuthType {
-        PASSWORD, KEYFILE
-    }
+    private final String host;
+    private final int port;
+    private final String path;
+    private final ProtocolType protocol;
+    private final Credentials credentials;
 
-    ConnectInfo() {
+    public ConnectInfo(String host, int port, String path, ProtocolType protocol, Credentials credentials) {
+        this.host = host;
+        this.port = port;
+        this.path = path;
+        this.protocol = protocol;
+        this.credentials = credentials;
     }
-
-    private String host;
-    private int port;
-    private String path;
-    private ProtocolType protocol;
-    private String username;
-    private String password;
-    private String keyfilePath;
-    private AuthType authType = AuthType.PASSWORD;
 
     public String getHost() {
         return host;
-    }
-
-    public void setHost(String host) {
-        this.host = host;
     }
 
     public int getPort() {
         return port;
     }
 
-    public void setPort(int port) {
-        this.port = port;
-    }
-
     public String getPath() {
         return path;
-    }
-
-    public void setPath(String path) {
-        this.path = path;
     }
 
     public ProtocolType getProtocol() {
         return protocol;
     }
 
-    public void setProtocol(ProtocolType protocol) {
-        this.protocol = protocol;
-    }
-
-    public String getUsername() {
-        return username;
-    }
-
-    public void setUsername(String username) {
-        this.username = username;
-    }
-
-    public String getPassword() {
-        return password;
-    }
-
-    public void setPassword(String password) {
-        this.password = password;
-    }
-
-    public AuthType getAuthType() {
-        return authType;
-    }
-
-    public void setAuthType(AuthType authType) {
-        this.authType = authType;
-    }
-
-    public String getKeyfilePath() {
-        return keyfilePath;
-    }
-
-    public void setKeyfilePath(String keyfilePath) {
-        this.keyfilePath = keyfilePath;
+    public Credentials getCredentials() {
+        return credentials;
     }
 
     @Override
@@ -100,13 +56,10 @@ public class ConnectInfo {
         ConnectInfo that = (ConnectInfo) o;
 
         if (port != that.port) return false;
-        if (authType != that.authType) return false;
+        if (credentials != null ? !credentials.equals(that.credentials) : that.credentials != null) return false;
         if (host != null ? !host.equals(that.host) : that.host != null) return false;
-        if (keyfilePath != null ? !keyfilePath.equals(that.keyfilePath) : that.keyfilePath != null) return false;
-        if (password != null ? !password.equals(that.password) : that.password != null) return false;
         if (path != null ? !path.equals(that.path) : that.path != null) return false;
         if (protocol != that.protocol) return false;
-        if (username != null ? !username.equals(that.username) : that.username != null) return false;
 
         return true;
     }
@@ -117,24 +70,19 @@ public class ConnectInfo {
         result = 31 * result + port;
         result = 31 * result + (path != null ? path.hashCode() : 0);
         result = 31 * result + (protocol != null ? protocol.hashCode() : 0);
-        result = 31 * result + (username != null ? username.hashCode() : 0);
-        result = 31 * result + (password != null ? password.hashCode() : 0);
-        result = 31 * result + (keyfilePath != null ? keyfilePath.hashCode() : 0);
-        result = 31 * result + (authType != null ? authType.hashCode() : 0);
+        result = 31 * result + (credentials != null ? credentials.hashCode() : 0);
         return result;
     }
 
     @Override
     public String toString() {
-        return "ConnectInfo{" +
-                "host='" + host + '\'' +
-                ", port=" + port +
-                ", path='" + path + '\'' +
-                ", protocol=" + protocol +
-                ", username='" + username + '\'' +
-                ", password='" + password + '\'' +
-                ", keyfilePath='" + keyfilePath + '\'' +
-                ", authType=" + authType +
-                '}';
+        final StringBuilder sb = new StringBuilder("ConnectInfo{");
+        sb.append("host='").append(host).append('\'');
+        sb.append(", port=").append(port);
+        sb.append(", path='").append(path).append('\'');
+        sb.append(", protocol=").append(protocol);
+        sb.append(", credentials=").append(credentials);
+        sb.append('}');
+        return sb.toString();
     }
 }

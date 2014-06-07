@@ -1,5 +1,5 @@
 <j:jelly xmlns:j="jelly:core" xmlns:st="jelly:stapler" xmlns:d="jelly:define" xmlns:l="/lib/layout"
-         xmlns:t="/lib/hudson" xmlns:f="/lib/form">
+         xmlns:t="/lib/hudson" xmlns:f="/lib/form" xmlns:c="/lib/credentials">
     <!--
       This Jelly script is used to produce the global configuration option.
 
@@ -19,23 +19,20 @@
 
             <f:repeatable var="host" items="${descriptor.hosts}">
                 <table width="100%">
+                    <f:invisibleEntry><f:textbox name="id" value="${host.id}"/></f:invisibleEntry>
                     <f:entry title="${%Connect url}">
-                        <f:textbox name="scp.connectUrl" value="${host.connectUrl}"/>
+                        <f:textbox name="connectUrl" value="${host.connectUrl}"/>
                     </f:entry>
-                    <f:entry title="${%Password}">
-                        <f:password name="scp.password"
-                                    type="password" value="${host.password}"/>
-                    </f:entry>
-                    <f:entry title="${%Keyfile}">
-                        <f:textbox name="scp.keyfilePath" value="${host.keyfilePath}"/>
+                    <f:entry title="${%Credentials}" field="credentialsId">
+                        <c:select/>
                     </f:entry>
                     <f:entry title="${%Enabled}">
-                        <f:checkbox name="scp.enable" checked="${host.enable}"/>
+                        <f:checkbox name="enable" checked="${host.enable}"/>
                     </f:entry>
                     <f:entry title="">
                         <f:validateButton
                                 title="${%Test Connection}" progress="${%Testing...}"
-                                method="testConnection" with="scp.connectUrl,scp.password,scp.keyfilePath"/>
+                                method="testConnection" with="connectUrl,credentialsId"/>
                     </f:entry>
                     <f:entry title="">
                         <div style="float:right">
@@ -47,7 +44,7 @@
         </f:entry>
         <f:advanced>
                 <f:entry title="${%Concurrent upload}">
-                    <f:checkbox name="adv.concurrentUpload" checked="${descriptor.concurrentUpload}"></f:checkbox>
+                    <f:checkbox name="concurrentUpload" checked="${descriptor.concurrentUpload}"></f:checkbox>
                 </f:entry>
         </f:advanced>
     </f:section>

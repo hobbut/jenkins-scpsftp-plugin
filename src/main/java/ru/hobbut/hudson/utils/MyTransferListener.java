@@ -1,7 +1,9 @@
 package ru.hobbut.hudson.utils;
 
+import net.schmizz.sshj.common.StreamCopier;
 import net.schmizz.sshj.xfer.TransferListener;
 
+import java.io.IOException;
 import java.io.PrintStream;
 import java.util.Date;
 
@@ -25,22 +27,21 @@ public class MyTransferListener implements TransferListener {
         this.host = host;
     }
 
-    public void startedDir(String name) {}
-
-    public void finishedFile() {}
-
-    public void finishedDir() {}
-
-    public void startedFile(String name, long size) {
-        currentFileName = name;
-        currentFileSize = size;
+    public TransferListener directory(String name) {
+        return new MyTransferListener(printStream, host);
     }
 
-    public void reportProgress(long transferred) {
-        long curDate = new Date().getTime();
-        if (printStream != null && lastReportDate + REPORT_INTERVAL < curDate) {
-            lastReportDate = curDate;
-            Utils.logConsole(printStream, String.format("%s: %s %d%%", host, currentFileName, (transferred * 100) / currentFileSize));
-        }
+    public StreamCopier.Listener file(String name, long size) {
+        currentFileName = name;
+        currentFileSize = size;
+        return new StreamCopier.Listener() {
+            public void reportProgress(long transferred) throws IOException {
+                long curDate = new Date().getTime();
+                if (printStream != null && lastReportDate + REPORT_INTERVAL < curDate) {
+                    lastReportDate = curDate;
+                    Utils.logConsole(printStream, String.format("%s: %s %d%%", host, currentFileName, (transferred * 100) / currentFileSize));
+                }
+            }
+        };
     }
 }

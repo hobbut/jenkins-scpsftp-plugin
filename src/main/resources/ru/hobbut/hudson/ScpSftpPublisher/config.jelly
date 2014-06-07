@@ -10,13 +10,18 @@
       Creates a text field that shows the value of the "name" property.
       When submitted, it will be passed to the corresponding constructor parameter.
     -->
+
+    <j:invokeStatic var="credProvider" className="com.cloudbees.plugins.credentials.SystemCredentialsProvider"
+                    method="getInstance"/>
+
     <f:entry title="${%SCP Sites}" name="o">
         <f:repeatable name="hostsWithEntries" var="host" items="${instance.hostsWithEntries}">
             <table width="100%">
                 <f:entry title="Host">
-                    <select class="setting-input" name="connectUrl">
+                    <select class="setting-input" name="hostId">
+                        <f:option selected="0" value="0">...</f:option>
                         <j:forEach var="h" items="${descriptor.hosts}">
-                            <f:option selected="${host.connectUrl==h.connectUrl}">${h.connectUrl}</f:option>
+                            <f:option selected="${host.hostId==h.id}" value="${h.id}">${h.extendedConnectionUrl}</f:option>
                         </j:forEach>
                     </select>
                 </f:entry>

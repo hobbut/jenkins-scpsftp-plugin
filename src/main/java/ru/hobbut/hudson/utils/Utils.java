@@ -1,12 +1,23 @@
 package ru.hobbut.hudson.utils;
 
+import com.cloudbees.jenkins.plugins.sshcredentials.SSHUserPrivateKey;
+import com.cloudbees.plugins.credentials.CredentialsMatchers;
+import com.cloudbees.plugins.credentials.CredentialsProvider;
+import com.cloudbees.plugins.credentials.common.StandardUsernameCredentials;
+import com.cloudbees.plugins.credentials.common.UsernamePasswordCredentials;
+import com.cloudbees.plugins.credentials.domains.SchemeRequirement;
+import hudson.security.ACL;
+import hudson.util.Secret;
+import jenkins.model.Jenkins;
 import net.schmizz.sshj.SSHClient;
 import net.schmizz.sshj.transport.TransportException;
 import net.schmizz.sshj.transport.verification.PromiscuousVerifier;
 import net.schmizz.sshj.userauth.UserAuthException;
-import net.schmizz.sshj.userauth.keyprovider.*;
+import net.schmizz.sshj.userauth.keyprovider.KeyProvider;
 import net.schmizz.sshj.userauth.method.*;
+import net.schmizz.sshj.userauth.password.PasswordFinder;
 import net.schmizz.sshj.userauth.password.PasswordUtils;
+import net.schmizz.sshj.userauth.password.Resource;
 import org.apache.commons.io.FilenameUtils;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -21,8 +32,8 @@ import java.net.URISyntaxException;
 import java.util.ArrayList;
 import java.util.List;
 
-import static ru.hobbut.hudson.utils.ConnectInfo.ProtocolType.*;
-import static ru.hobbut.hudson.utils.ConnectInfo.AuthType.*;
+import static ru.hobbut.hudson.utils.ConnectInfo.ProtocolType.SCP;
+import static ru.hobbut.hudson.utils.ConnectInfo.ProtocolType.SFTP;
 
 /**
  * Created by IntelliJ IDEA.
@@ -40,52 +51,33 @@ public class Utils {
     private static final int CONNECT_TIMEOUT = 10000;
 
     public static ConnectInfo getConnectInfo(Host host) {
-        ConnectInfo connectInfo = new ConnectInfo();
-
+        ConnectInfo.ProtocolType protocolType;
         try {
             log.debug("connect uri" + host.getConnectUrl());
             URI uri = new URI(host.getConnectUrl());
             String protocol = uri.getScheme();
             if (StringUtils.hasText(protocol)) {
                 if ("scp".equalsIgnoreCase(protocol)) {
-                    connectInfo.setProtocol(SCP);
+                    protocolType = SCP;
                 } else if ("sftp".equalsIgnoreCase(protocol)) {
-                    connectInfo.setProtocol(SFTP);
+                    protocolType = SFTP;
                 } else {
-                    throw new PluginException("wrong protocol");
+                    throw new PluginException("unkown protocol");
                 }
             } else {
-                connectInfo.setProtocol(SCP);
+                protocolType = SCP;
             }
-
-            connectInfo.setHost(uri.getHost());
 
             int port = uri.getPort();
             if (port == -1) {
-                connectInfo.setPort(SSH_PORT);
-            } else {
-                connectInfo.setPort(port);
+                port = SSH_PORT;
             }
 
-            String path = uri.getPath();
-            if (StringUtils.hasText(path)) {
-                connectInfo.setPath(path);
-            }
-
-            if (StringUtils.hasText(host.getKeyfilePath())) {
-                connectInfo.setKeyfilePath(host.getKeyfilePath());
-                connectInfo.setAuthType(KEYFILE);
-            }
-
-            connectInfo.setUsername(uri.getUserInfo());
-            connectInfo.setPassword(host.getPassword());
-
+            return new ConnectInfo(uri.getHost(), port, uri.getPath(), protocolType, host.getCredentials());
         } catch (URISyntaxException e) {
             log.error(e.getMessage(), e);
             throw new PluginException("malformed url", e);
         }
-
-        return connectInfo;
     }
 
     public static SSHClient getSshClient(ConnectInfo connectInfo) {
@@ -100,40 +92,44 @@ public class Utils {
         return sshClient;
     }
 
-    private static List<AuthMethod> getAuthMethods(SSHClient client, final ConnectInfo connectInfo) {
+    private static List<AuthMethod> getAuthMethods(SSHClient client, final ConnectInfo connectInfo) throws Exception {
         List<AuthMethod> authMethods = new ArrayList<AuthMethod>();
-        switch (connectInfo.getAuthType()) {
-            case PASSWORD:
-                char[] passwd = connectInfo.getPassword().toCharArray();
-                authMethods.add(new AuthPassword(PasswordUtils.createOneOff(passwd.clone())));
-                authMethods.add(new AuthKeyboardInteractive(new PasswordResponseProvider(PasswordUtils.createOneOff(passwd.clone()))));
-                break;
-            case KEYFILE:
-                KeyProvider keyProvider;
-                try {
-                    keyProvider = client.loadKeys(connectInfo.getKeyfilePath(), connectInfo.getPassword());
-                } catch (IOException e) {
-                    log.error(e.getMessage(), e);
-                    throw new PluginException("error reading keyfile");
+        if (connectInfo.getCredentials() instanceof UsernamePasswordCredentials) {
+            char[] passwd = Secret.toString(((UsernamePasswordCredentials) connectInfo.getCredentials()).getPassword()).toCharArray().clone();
+            authMethods.add(new AuthPassword(PasswordUtils.createOneOff(passwd.clone())));
+            authMethods.add(new AuthKeyboardInteractive(new PasswordResponseProvider(PasswordUtils.createOneOff(passwd.clone()))));
+        } else if (connectInfo.getCredentials() instanceof SSHUserPrivateKey) {
+            String privateKey = ((SSHUserPrivateKey) connectInfo.getCredentials()).getPrivateKey();
+            KeyProvider keyProvider = client.loadKeys(privateKey, null, new PasswordFinder() {
+                public char[] reqPassword(Resource<?> resource) {
+                    return Secret.toString(((SSHUserPrivateKey) connectInfo.getCredentials()).getPassphrase()).toCharArray().clone();
                 }
-                AuthPublickey authPublickey = new AuthPublickey(keyProvider);
-                authMethods.add(authPublickey);
-                break;
-            default:
-                throw new PluginException("unsupported authentication");
+
+                public boolean shouldRetry(Resource<?> resource) {
+                    return false;
+                }
+            });
+            authMethods.add(new AuthPublickey(keyProvider));
         }
         return authMethods;
     }
 
     public static boolean authenticate(SSHClient sshClient, ConnectInfo connectInfo) {
         try {
-            sshClient.auth(connectInfo.getUsername(), getAuthMethods(sshClient, connectInfo));
+            if (connectInfo.getCredentials() instanceof StandardUsernameCredentials) {
+                sshClient.auth(((StandardUsernameCredentials) connectInfo.getCredentials()).getUsername(), getAuthMethods(sshClient, connectInfo));
+            } else {
+                return false;
+            }
         } catch (UserAuthException e) {
             log.error(e.getMessage(), e);
             return false;
         } catch (TransportException e) {
             log.error(e.getMessage(), e);
             throw new PluginException("transport error", e);
+        } catch (Exception e) {
+            log.error(e.getMessage(), e);
+            throw new PluginException("unknown error", e);
         }
         return true;
     }
@@ -199,5 +195,16 @@ public class Utils {
 
     public static void logConsole(PrintStream logger, String message) {
         logger.println("" + LOG_PREFIX + message);
+    }
+
+    public static final SchemeRequirement SSH_SCHEME = new SchemeRequirement("ssh");
+
+    public static StandardUsernameCredentials lookup(String credentialsId) {
+        return CredentialsMatchers.firstOrNull(
+                CredentialsProvider
+                        .lookupCredentials(StandardUsernameCredentials.class, Jenkins.getInstance(), ACL.SYSTEM,
+                                SSH_SCHEME),
+                CredentialsMatchers.withId(credentialsId)
+        );
     }
 }

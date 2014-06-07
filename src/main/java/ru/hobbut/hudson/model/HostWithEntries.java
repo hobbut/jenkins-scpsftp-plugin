@@ -2,6 +2,8 @@ package ru.hobbut.hudson.model;
 
 import org.kohsuke.stapler.DataBoundConstructor;
 
+import java.io.Serializable;
+
 /**
  * Created by IntelliJ IDEA.
  * User: hobbut
@@ -9,19 +11,19 @@ import org.kohsuke.stapler.DataBoundConstructor;
  * Time: 21:32
  */
 
-public class HostWithEntries {
-    private String connectUrl;
+public class HostWithEntries implements Serializable {
+    private String hostId;
     private String srcPath;
     private String dstPath;
     private String postBuildScript;
     private boolean enable = true;
 
-    public String getConnectUrl() {
-        return connectUrl;
+    public String getHostId() {
+        return hostId;
     }
 
-    public void setConnectUrl(String connectUrl) {
-        this.connectUrl = connectUrl;
+    public void setHostId(String hostId) {
+        this.hostId = hostId;
     }
 
     public String getSrcPath() {
@@ -57,8 +59,8 @@ public class HostWithEntries {
     }
 
     @DataBoundConstructor
-    public HostWithEntries(String connectUrl, String srcPath, String dstPath, String postBuildScript, boolean enable) {
-        this.connectUrl = connectUrl;
+    public HostWithEntries(String hostId, String srcPath, String dstPath, String postBuildScript, boolean enable) {
+        this.hostId = hostId;
         this.srcPath = srcPath;
         this.dstPath = dstPath;
         this.postBuildScript = postBuildScript;

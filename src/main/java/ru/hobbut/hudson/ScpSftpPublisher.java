@@ -1,25 +1,27 @@
 package ru.hobbut.hudson;
 
-import hudson.*;
+import com.cloudbees.jenkins.plugins.sshcredentials.SSHUserListBoxModel;
+import com.cloudbees.plugins.credentials.CredentialsProvider;
+import com.cloudbees.plugins.credentials.common.StandardUsernameCredentials;
+import hudson.Extension;
+import hudson.Launcher;
 import hudson.model.*;
+import hudson.security.ACL;
 import hudson.tasks.BuildStepDescriptor;
 import hudson.tasks.BuildStepMonitor;
 import hudson.tasks.Notifier;
 import hudson.tasks.Publisher;
 import hudson.util.CopyOnWriteList;
 import hudson.util.FormValidation;
+import hudson.util.ListBoxModel;
 import net.sf.json.JSONObject;
-import org.kohsuke.stapler.DataBoundConstructor;
-import org.kohsuke.stapler.QueryParameter;
-import org.kohsuke.stapler.StaplerRequest;
-import org.kohsuke.stapler.StaplerResponse;
+import org.kohsuke.stapler.*;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.util.StringUtils;
 import ru.hobbut.hudson.model.Host;
 import ru.hobbut.hudson.model.HostWithEntries;
 import ru.hobbut.hudson.utils.ConnectInfo;
-import ru.hobbut.hudson.utils.PluginException;
 import ru.hobbut.hudson.utils.UploadCallable;
 import ru.hobbut.hudson.utils.Utils;
 
@@ -58,18 +60,18 @@ public class ScpSftpPublisher extends Publisher {
         return BuildStepMonitor.BUILD;
     }
 
-    private Host getHost(String connectUrl) {
-        return DESCRIPTOR.getHost(connectUrl);
+    private Host getHost(String hostId) {
+        return DESCRIPTOR.getHost(hostId);
     }
 
     private Map<Host, List<HostWithEntries>> getEntriesByHost(AbstractBuild build, Launcher launcher, BuildListener listener) {
         Map<Host, List<HostWithEntries>> map = new HashMap<Host, List<HostWithEntries>>();
 
         for (HostWithEntries hostWithEntries : hostsWithEntries) {
-            Host host = getHost(hostWithEntries.getConnectUrl());
+            Host host = getHost(hostWithEntries.getHostId());
             if (host == null) {
                 build.setResult(Result.UNSTABLE);
-                logConsole(listener.getLogger(), "Cannot find host:" + hostWithEntries.getConnectUrl());
+                logConsole(listener.getLogger(), "Cannot find host by id:" + hostWithEntries.getHostId());
                 continue;
             }
             List<HostWithEntries> list = map.get(host);
@@ -167,15 +169,17 @@ public class ScpSftpPublisher extends Publisher {
 
         @Override
         public Publisher newInstance(StaplerRequest req, JSONObject formData) throws FormException {
+            logger.error("form-data:{}", formData);
             return req.bindJSON(ScpSftpPublisher.class, formData);
         }
 
         @Override
         public boolean configure(StaplerRequest req, JSONObject json) throws FormException {
-            logger.debug("json " + json.toString());
-            logger.debug("parameters " + req.getParameterMap());
-            req.bindParameters(this, "adv.");
-            hosts.replaceBy(req.bindParametersToList(Host.class, "scp."));
+            logger.info("json " + json.toString());
+            logger.info("parameters " + req.getParameterMap());
+//            req.bindParameters(this, "adv.");
+            hosts.replaceBy(req.bindJSONToList(Host.class, json.get("host")));
+            setConcurrentUpload(json.getBoolean("concurrentUpload"));
             save();
             return true;
         }
@@ -188,12 +192,12 @@ public class ScpSftpPublisher extends Publisher {
             load();
         }
 
-        public Host getHost(String connectionUrl) {
-            if (!StringUtils.hasText(connectionUrl)) {
+        public Host getHost(String hostId) {
+            if (!StringUtils.hasText(hostId)) {
                 return null;
             }
             for (Host host : hosts) {
-                if (connectionUrl.equals(host.getConnectUrl())) {
+                if (hostId.equals(host.getId())) {
                     return host;
                 }
             }
@@ -204,15 +208,20 @@ public class ScpSftpPublisher extends Publisher {
             return hosts.toArray(new Host[hosts.size()]);
         }
 
+        public ListBoxModel doFillCredentialsIdItems(@AncestorInPath ItemGroup context) {
+            return new SSHUserListBoxModel().withAll(
+                    CredentialsProvider.lookupCredentials(StandardUsernameCredentials.class, context,
+                            ACL.SYSTEM, Utils.SSH_SCHEME));
+        }
+
         public FormValidation doTestConnection(StaplerRequest req, StaplerResponse rsp,
-                                               @QueryParameter("scp.connectUrl") String connectUrl,
-                                               @QueryParameter("scp.password") String password,
-                                               @QueryParameter("scp.keyfilePath") String keyfile) {
-            Host host = new Host(connectUrl, password, keyfile, true);
+                                               @QueryParameter("connectUrl") String connectUrl,
+                                               @QueryParameter("credentialsId") String credentialsId) {
+            Host host = new Host(null, connectUrl, true, credentialsId);
             try {
                 ConnectInfo connectInfo = Utils.getConnectInfo(host);
                 return Utils.checkAuthentication(connectInfo) ? FormValidation.ok("Connection ok") : FormValidation.error("Authentication failed");
-            } catch (PluginException e) {
+            } catch (Exception e) {
                 return FormValidation.error(e.getMessage(), e);
             }
         }

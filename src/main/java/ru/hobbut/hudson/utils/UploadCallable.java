@@ -47,7 +47,7 @@ public class UploadCallable implements Callable<Map<HostWithEntries, Boolean>> {
         Map<HostWithEntries, Boolean> map = new HashMap<HostWithEntries, Boolean>();
 
         if (!host.isEnable()) {
-            logConsole(listener.getLogger(), "Skipping disabled host:" + host.getConnectUrl());
+            logConsole(listener.getLogger(), "Skipping disabled host:" + host.getExtendedConnectionUrl() + " id:" + host.getId());
             for (HostWithEntries hostWithEntries : hostsWithEntries) {
                 map.put(hostWithEntries, true);
             }
@@ -58,7 +58,7 @@ public class UploadCallable implements Callable<Map<HostWithEntries, Boolean>> {
         SSHClient sshClient = Utils.getSshClient(connectInfo);
         if (!Utils.authenticate(sshClient, connectInfo)) {
             Utils.disconnectSshClient(sshClient);
-            logConsole(listener.getLogger(), "Error authenticating on " + host.getConnectUrl());
+            logConsole(listener.getLogger(), "Error authenticating on " + host.getExtendedConnectionUrl() + " id:" + host.getId());
             for (HostWithEntries hostWithEntries : hostsWithEntries) {
                 map.put(hostWithEntries, false);
             }
@@ -69,7 +69,8 @@ public class UploadCallable implements Callable<Map<HostWithEntries, Boolean>> {
 
         for (HostWithEntries hostWithEntries : hostsWithEntries) {
             if (!hostWithEntries.isEnable()) {
-                logConsole(listener.getLogger(), "Skipping disabled entry:" + hostWithEntries.getConnectUrl());
+                logConsole(listener.getLogger(), "Skipping disabled entry:" + host.getExtendedConnectionUrl());
+                continue;
             }
             String expandedSrcPath = Util.replaceMacro(hostWithEntries.getSrcPath(), build.getEnvironment(listener)).trim();
             String expandedDstPath = Util.replaceMacro(hostWithEntries.getDstPath(), build.getEnvironment(listener)).trim();
@@ -82,7 +83,7 @@ public class UploadCallable implements Callable<Map<HostWithEntries, Boolean>> {
             }
             boolean res = true;
             for (FilePath filePath : src) {
-                try{
+                try {
                     res = uploader.uploadFile(filePath.getRemote(), expandedDstPath);
                 } catch (IOException e) {
                     log.error(e.getMessage(), e);
